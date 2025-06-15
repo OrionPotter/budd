@@ -1,6 +1,6 @@
 use actix_web::{web, App, HttpServer, HttpResponse};
 use reqwest::Client;
-use crate::services::stock_service::{get_company_data, get_stock_data};
+use crate::services::stock_service::{get_bonus, get_company_data, get_holders_nums, get_indicator, get_stock_data, get_top_holders};
 
 mod core;
 mod services;
@@ -8,11 +8,19 @@ mod errors;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
+    // 初始化日志
+    env_logger::Builder::from_default_env()
+        .filter_level(log::LevelFilter::Info) // 默认日志级别
+        .init();
     // 启动 HTTP 服务器并绑定到指定地址
     HttpServer::new(|| {
         App::new()
             .route("/stock/{symbol}", web::get().to(stock_handler)) 
             .route("/company/{symbol}", web::get().to(company_handler))
+            .route("/top_holders/{symbol}", web::get().to(top_holder_handler))
+            .route("/holders/{symbol}", web::get().to(holders_num_handler))
+            .route("/bonus/{symbol}", web::get().to(bonus_handler))
+            .route("/indicator/{symbol}", web::get().to(indicator_handler))
     })
         .bind("127.0.0.1:8080")? // 监听地址和端口
         .run()
@@ -63,6 +71,98 @@ async fn company_handler(path: web::Path<(String,)>) -> HttpResponse {
         Err(err) => {
             eprintln!("请求失败: {}", err);
             HttpResponse::InternalServerError().body(format!("请求失败: {}", err)) 
+        }
+    }
+}
+
+async fn top_holder_handler(path: web::Path<(String,)>) -> HttpResponse {
+    let symbol = &path.0;  // 解构 path 中的元组，直接获取 symbol 参数
+
+    // 创建 reqwest 客户端
+    let client = Client::new();
+
+    // 获取股票数据
+    match get_top_holders(symbol, &client).await {
+        Ok(data) => {
+            // 返回结果作为 JSON 响应
+            if let Some(items) = data.get("data").and_then(|data| data.get("items")) {
+                HttpResponse::Ok().json(items)
+            } else {
+                HttpResponse::NotFound().body("未找到 items 字段")
+            }
+        }
+        Err(err) => {
+            eprintln!("请求失败: {}", err);
+            HttpResponse::InternalServerError().body(format!("请求失败: {}", err))
+        }
+    }
+}
+
+async fn holders_num_handler(path: web::Path<(String,)>) -> HttpResponse {
+    let symbol = &path.0;  // 解构 path 中的元组，直接获取 symbol 参数
+
+    // 创建 reqwest 客户端
+    let client = Client::new();
+
+    // 获取股票数据
+    match get_holders_nums(symbol, &client).await {
+        Ok(data) => {
+            // 返回结果作为 JSON 响应
+            if let Some(items) = data.get("data").and_then(|data| data.get("items")) {
+                HttpResponse::Ok().json(items)
+            } else {
+                HttpResponse::NotFound().body("未找到 items 字段")
+            }
+        }
+        Err(err) => {
+            eprintln!("请求失败: {}", err);
+            HttpResponse::InternalServerError().body(format!("请求失败: {}", err))
+        }
+    }
+}
+
+async fn bonus_handler(path: web::Path<(String,)>) -> HttpResponse {
+    let symbol = &path.0;  // 解构 path 中的元组，直接获取 symbol 参数
+
+    // 创建 reqwest 客户端
+    let client = Client::new();
+
+    // 获取股票数据
+    match get_bonus(symbol, &client).await {
+        Ok(data) => {
+            // 返回结果作为 JSON 响应
+            if let Some(items) = data.get("data").and_then(|data| data.get("items")) {
+                HttpResponse::Ok().json(items)
+            } else {
+                HttpResponse::NotFound().body("未找到 items 字段")
+            }
+        }
+        Err(err) => {
+            eprintln!("请求失败: {}", err);
+            HttpResponse::InternalServerError().body(format!("请求失败: {}", err))
+        }
+    }
+}
+
+async fn indicator_handler(path: web::Path<(String,)>) -> HttpResponse {
+    let symbol = &path.0;  // 解构 path 中的元组，直接获取 symbol 参数
+
+    // 创建 reqwest 客户端
+    let client = Client::new();
+
+    // 获取股票数据
+    match get_indicator(symbol, &client).await {
+        Ok(data) => {
+            // 返回结果作为 JSON 响应
+            if let Some(list) = data.get("data").and_then(|data| data.get("list")) {
+                HttpResponse::Ok().json(list)
+            } else {
+                HttpResponse::NotFound().body("未找到 list 字段")
+            }
+        }
+        Err(err) => {
+            eprintln!("请求失败: {}", err);
+            HttpResponse::InternalServerError().body(format!("请求失败: {}", err))
         }
     }
 }
