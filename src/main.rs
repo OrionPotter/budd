@@ -1,6 +1,6 @@
 use actix_web::{web, App, HttpServer, HttpResponse};
 use reqwest::Client;
-use crate::services::stock_service::{get_bonus, get_company_data, get_holders_nums, get_indicator, get_stock_data, get_top_holders};
+use crate::services::stock_service::{get_balance, get_bonus, get_cash_flow, get_company_data, get_holders_nums, get_income, get_indicator, get_stock_data, get_top_holders};
 
 mod core;
 mod services;
@@ -21,6 +21,9 @@ async fn main() -> std::io::Result<()> {
             .route("/holders/{symbol}", web::get().to(holders_num_handler))
             .route("/bonus/{symbol}", web::get().to(bonus_handler))
             .route("/indicator/{symbol}", web::get().to(indicator_handler))
+            .route("/income/{symbol}", web::get().to(income_handler))
+            .route("/balance/{symbol}", web::get().to(balance_handler))
+            .route("/cash_flow/{symbol}", web::get().to(cash_flow_handler))
     })
         .bind("127.0.0.1:8080")? // 监听地址和端口
         .run()
@@ -152,6 +155,75 @@ async fn indicator_handler(path: web::Path<(String,)>) -> HttpResponse {
 
     // 获取股票数据
     match get_indicator(symbol, &client).await {
+        Ok(data) => {
+            // 返回结果作为 JSON 响应
+            if let Some(list) = data.get("data").and_then(|data| data.get("list")) {
+                HttpResponse::Ok().json(list)
+            } else {
+                HttpResponse::NotFound().body("未找到 list 字段")
+            }
+        }
+        Err(err) => {
+            eprintln!("请求失败: {}", err);
+            HttpResponse::InternalServerError().body(format!("请求失败: {}", err))
+        }
+    }
+}
+
+async fn income_handler(path: web::Path<(String,)>) -> HttpResponse {
+    let symbol = &path.0;  // 解构 path 中的元组，直接获取 symbol 参数
+
+    // 创建 reqwest 客户端
+    let client = Client::new();
+
+    // 获取股票数据
+    match get_income(symbol, &client).await {
+        Ok(data) => {
+            // 返回结果作为 JSON 响应
+            if let Some(list) = data.get("data").and_then(|data| data.get("list")) {
+                HttpResponse::Ok().json(list)
+            } else {
+                HttpResponse::NotFound().body("未找到 list 字段")
+            }
+        }
+        Err(err) => {
+            eprintln!("请求失败: {}", err);
+            HttpResponse::InternalServerError().body(format!("请求失败: {}", err))
+        }
+    }
+}
+
+async fn balance_handler(path: web::Path<(String,)>) -> HttpResponse {
+    let symbol = &path.0;  // 解构 path 中的元组，直接获取 symbol 参数
+
+    // 创建 reqwest 客户端
+    let client = Client::new();
+
+    // 获取股票数据
+    match get_balance(symbol, &client).await {
+        Ok(data) => {
+            // 返回结果作为 JSON 响应
+            if let Some(list) = data.get("data").and_then(|data| data.get("list")) {
+                HttpResponse::Ok().json(list)
+            } else {
+                HttpResponse::NotFound().body("未找到 list 字段")
+            }
+        }
+        Err(err) => {
+            eprintln!("请求失败: {}", err);
+            HttpResponse::InternalServerError().body(format!("请求失败: {}", err))
+        }
+    }
+}
+
+async fn cash_flow_handler(path: web::Path<(String,)>) -> HttpResponse {
+    let symbol = &path.0;  // 解构 path 中的元组，直接获取 symbol 参数
+
+    // 创建 reqwest 客户端
+    let client = Client::new();
+
+    // 获取股票数据
+    match get_cash_flow(symbol, &client).await {
         Ok(data) => {
             // 返回结果作为 JSON 响应
             if let Some(list) = data.get("data").and_then(|data| data.get("list")) {
