@@ -3,6 +3,7 @@ use serde_json::Value;
 use crate::errors::error::ApiError;
 use crate::core::common_header::create_headers;
 use log::info;
+use chrono::{Utc};
 
 async fn get_data_from_url(url: &str, client: &Client) -> Result<Value, ApiError> {
     info!("🚀 发起请求 → URL: {}", url);
@@ -119,3 +120,56 @@ pub async fn get_cash_flow(symbol: String, client: Client) -> Result<Value, ApiE
         .cloned()
         .ok_or_else(|| ApiError::NotFound("cash flow data not found".to_string()))
 }
+
+// 获取分时图
+pub async fn get_minute_line(symbol: String, client: Client) -> Result<Value, ApiError> {
+    let url = format!("https://stock.xueqiu.com/v5/stock/chart/minute.json?symbol={}&period=1d", symbol);
+    let data = get_data_from_url(&url, &client).await?;
+    data.get("data")
+        .and_then(|d| d.get("items"))
+        .cloned()
+        .ok_or_else(|| ApiError::NotFound("minute line data not found".to_string()))
+}
+
+// 获取股票实时交易分笔数据
+pub async fn get_trade(symbol: String, client: Client) -> Result<Value, ApiError> {
+    let url = format!("https://stock.xueqiu.com/v5/stock/history/trade.json?symbol={}&count=10", symbol);
+    let data = get_data_from_url(&url, &client).await?;
+    data.get("data")
+        .and_then(|d| d.get("items"))
+        .cloned()
+        .ok_or_else(|| ApiError::NotFound("trade data not found".to_string()))
+}
+
+// 获取盘口数据
+pub async fn get_pankou(symbol: String, client: Client) -> Result<Value, ApiError> {
+    let url = format!("https://stock.xueqiu.com/v5/stock/realtime/pankou.json?symbol={}", symbol);
+    let data = get_data_from_url(&url, &client).await?;
+    data.get("data")
+        .cloned()
+        .ok_or_else(|| ApiError::NotFound("trade data not found".to_string()))
+}
+
+const VALID_PERIODS: [&str; 11] = [
+    "day", "week", "month", "quarter", "year",
+    "120m", "60m", "30m", "15m", "5m", "1m"
+];
+
+// 获取K线数据
+pub async fn get_k_line(symbol: String, client: Client, interval: String) -> Result<Value, ApiError> {
+    // 验证period参数是否合法
+    if !VALID_PERIODS.contains(&interval .as_str()) {
+        return Err(ApiError::NotFound("interval  data not found".to_string()));
+    }
+    let begin_timestamp = Utc::now().timestamp_millis();
+    let url = format!("https://stock.xueqiu.com/v5/stock/chart/kline.json?symbol={}&begin={}&period={}&type=before&count=-284&indicator=kline,pe,pb,ps,pcf,market_capital,agt,ggt,balance", symbol, begin_timestamp, interval);
+    let data = get_data_from_url(&url, &client).await?;
+    data.get("data")
+        .cloned()
+        .ok_or_else(|| ApiError::NotFound("trade data not found".to_string()))
+}
+
+
+
+
+
